@@ -104,11 +104,13 @@ def data_to_date_string_start_position(data, url):
 def request_data_from_remote_server(socket_ip, socket_port, url, remote_port):
     s = socks.socksocket()
     s.setproxy(socks.PROXY_TYPE_SOCKS5, socket_ip, socket_port)
+    #print 'THREAD STARTED "%s"' % url
 
     try:
         s.connect((url, remote_port))
+        #print 'CONNECTED "%s"' % url
 
-    except Exception as e:
+    except IOError as e:
         ## {{ wheezy compatibility
         if str(e).startswith('__init__'):
             print >> sys.stderr, 'connect error: URL "%s" not found.' % url
@@ -116,44 +118,40 @@ def request_data_from_remote_server(socket_ip, socket_port, url, remote_port):
         ## }}
             print >> sys.stderr, '"%s" %s ' % (url, e)
         return
-        #sys.exit(2)
+        #sys.exit
 
     s.send('HEAD / HTTP/1.0\r\n\r\n')
-
     data = ''
     buf = s.recv(1024)
+    print 'SENDING "%s"' % url
     while len(buf):
         data += buf
         buf = s.recv(1024)
     s.close()
+    print 'RECEIVED "%s"' % url
 
     data_to_date_string_start_position(data, url)
 
+
 def url_to_unixtime(pool):
-    timeout = Timeout()
-    timer = []
     threads = []
 
+    timeout = gevent.Timeout()
+    timer = []
+    seconds = 10
+
     for i in range(0, len(pool)):
-        timer.append(timeout.start_new(i))
+        timer.append(timeout.start_new(seconds))
         args = (request_data_from_remote_server, '127.0.0.1', '9050', pool[i], 80)
         threads.append(gevent.spawn(*args))
+
+    #gevent.joinall(threads)
 
     for i in range(0, len(pool)):
         try:
             threads[i].join(timeout=timer[i])
+
         except Timeout:
             print >> sys.stderr, '"%s" Timeout' % (threads[i].args[2])
-        ## debugging {{
-        except Exception as e:
-            print e
-        ## }}
 
     return urls, unix_times
-
-if __name__ == "__main__":
-    urls = []
-    unix_times = []
-
-    pool = sys.argv[1]
-    url_to_unixtime(pool)
