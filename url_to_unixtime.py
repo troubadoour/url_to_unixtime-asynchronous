@@ -108,7 +108,7 @@ def request_data_from_remote_server(socket_ip, socket_port, url, remote_port):
 
     try:
         s.connect((url, remote_port))
-        #print 'CONNECTED "%s"' % url
+        print 'CONNECTED "%s"' % url
 
     except IOError as e:
         ## {{ wheezy compatibility
@@ -133,21 +133,21 @@ def request_data_from_remote_server(socket_ip, socket_port, url, remote_port):
     data_to_date_string_start_position(data, url)
 
 
-def url_to_unixtime(pool):
+def url_to_unixtime(remotes):
     threads = []
 
     timeout = gevent.Timeout()
     timer = []
     seconds = 10
 
-    for i in range(0, len(pool)):
+    for i in range(0, len(remotes)):
         timer.append(timeout.start_new(seconds))
-        args = (request_data_from_remote_server, '127.0.0.1', '9050', pool[i], 80)
+        args = (request_data_from_remote_server, '127.0.0.1', '9050', remotes[i], 80)
         threads.append(gevent.spawn(*args))
 
     #gevent.joinall(threads)
 
-    for i in range(0, len(pool)):
+    for i in range(0, len(remotes)):
         try:
             threads[i].join(timeout=timer[i])
 
